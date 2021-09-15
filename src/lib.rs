@@ -38,7 +38,9 @@ pub mod structures {
     #[derive(Deserialize)]
     pub struct Option_ {
         pub names: Vec<String>,
+        #[serde(default)]
         pub values: Vec<String>,
+        #[serde(default)]
         pub arguments: i32,
     }
 
@@ -62,9 +64,13 @@ pub mod structures {
     #[derive(Deserialize)]
     pub struct Command {
         pub name: String,
+        #[serde(default)]
         pub subcommands: Vec<Command>,
+        #[serde(default)]
         pub options: Vec<Option_>,
+        #[serde(default)]
         pub arguments: i32,
+        #[serde(default)]
         pub values: Vec<String>,
     }
 
@@ -101,11 +107,11 @@ pub mod ex {
         "name": "launch",
         "options": [{
             "names": ["--image"],
-            "values": [10],
+            "values": ["__e4s_cl_path"],
             "arguments": 1
         }, {
             "names": ["--profile"],
-            "values": [20],
+            "values": ["__e4s_cl_profile"],
             "arguments": 1
         }, {
             "names": ["--backend"],
@@ -116,14 +122,14 @@ pub mod ex {
         "name": "profile",
         "subcommands": [{
             "name": "list",
-            "values": [20],
+            "values": ["__e4s_cl_profile"],
             "arguments": 1,
             "options": [{
                 "names": ["-s", "--short"]
             }]
         }, {
             "name": "show",
-            "values": [20],
+            "values": ["__e4s_cl_profile"],
             "arguments": 1
         }]
     }]
