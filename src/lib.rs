@@ -32,7 +32,7 @@ pub mod structures {
     }
 
     pub trait Completable {
-        fn candidates(&self, profiles: &Vec<Profile>) -> Vec<String>;
+        fn candidates<'a>(&'a self, profiles: &'a Vec<Profile>) -> Vec<&'a str>;
     }
 
     #[derive(Deserialize)]
@@ -45,16 +45,16 @@ pub mod structures {
     }
 
     impl Completable for Option_ {
-        fn candidates(&self, profiles: &Vec<Profile>) -> Vec<String> {
-            let mut strings: Vec<String> = self
+        fn candidates<'a>(&'a self, profiles: &'a Vec<Profile>) -> Vec<&'a str> {
+            let mut strings: Vec<&str> = self
                 .values
                 .iter()
                 .filter(|x| x.as_str() != PATH && x.as_str() != PROFILE)
-                .map(|x| x.to_owned())
+                .map(|x| x.as_str())
                 .collect();
 
             if self.values.contains(&PROFILE.to_owned()) {
-                strings.extend(profiles.iter().map(|x| x.name.to_owned()));
+                strings.extend(profiles.iter().map(|x| x.name.as_str()));
             }
 
             strings
@@ -75,16 +75,16 @@ pub mod structures {
     }
 
     impl Completable for Command {
-        fn candidates(&self, profiles: &Vec<Profile>) -> Vec<String> {
-            let mut strings: Vec<String> = self
+        fn candidates<'a>(&'a self, profiles: &'a Vec<Profile>) -> Vec<&'a str> {
+            let mut strings: Vec<&str> = self
                 .values
                 .iter()
                 .filter(|x| x.as_str() != PATH && x.as_str() != PROFILE)
-                .map(|x| x.to_owned())
+                .map(|x| x.as_str())
                 .collect();
 
             if self.values.contains(&PROFILE.to_owned()) {
-                strings.extend(profiles.iter().map(|x| x.name.to_owned()));
+                strings.extend(profiles.iter().map(|x| x.name.as_str()));
             }
 
             strings

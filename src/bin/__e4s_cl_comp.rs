@@ -59,7 +59,7 @@ fn routine() {
     let env_line_var: &str = "COMP_LINE";
     let args: Vec<String>;
 
-    let mut candidates: Vec<String>;
+    let mut candidates: Vec<&str>;
 
     let db_file = home_dir().unwrap().join(DATABASE);
     let profiles: Vec<Profile> = read_profiles(db_file).unwrap_or(vec![]);
@@ -128,21 +128,16 @@ fn routine() {
             current_command
                 .subcommands
                 .iter()
-                .map(|x| x.name.to_owned())
-                .collect::<Vec<String>>(),
+                .map(|x| x.name.as_str())
+                .collect::<Vec<&str>>(),
         );
         candidates.extend(
             current_command
                 .options
                 .iter()
-                .map(|x| {
-                    x.names
-                        .iter()
-                        .map(|y| y.to_owned())
-                        .collect::<Vec<String>>()
-                })
+                .map(|x| x.names.iter().map(|y| y.as_str()).collect::<Vec<&str>>())
                 .flatten()
-                .collect::<Vec<String>>(),
+                .collect::<Vec<&str>>(),
         );
     } else {
         candidates = current_option.candidates(&profiles);
