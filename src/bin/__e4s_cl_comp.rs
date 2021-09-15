@@ -1,5 +1,6 @@
 use dirs::home_dir;
 use e4s_cl_completion::ex::SAMPLE_JSON;
+use e4s_cl_completion::init_complete::COMMAND;
 use e4s_cl_completion::structures::{Command, Completable, Option_, Profile};
 use std::convert::TryFrom;
 use std::error::Error;
@@ -9,6 +10,7 @@ use std::path::Path;
 use std::process::exit;
 
 static UNSPECIFIED: i32 = -1;
+static ENV_LINE_VAR: &str = "COMP_LINE";
 
 static DATABASE: &'static str = ".local/e4s_cl/user.json";
 
@@ -53,24 +55,13 @@ fn load_example() -> Result<Command, Box<dyn Error>> {
     Ok(serde_json::from_str(SAMPLE_JSON)?)
 }
 
-fn routine() {
+fn routine(arguments: &Vec<String>) {
     let root_command = load_example().unwrap();
-
-    let env_line_var: &str = "COMP_LINE";
-    let args: Vec<String>;
 
     let mut candidates: Vec<&str>;
 
     let db_file = home_dir().unwrap().join(DATABASE);
     let profiles: Vec<Profile> = read_profiles(db_file).unwrap_or(vec![]);
-
-    match std::env::var(&env_line_var) {
-        Ok(string) => args = string.split(" ").map(|s| s.to_string()).collect(),
-        Err(string) => {
-            eprintln!("Error accessing {}: {}", env_line_var, string);
-            exit(1);
-        }
-    }
 
     let empty_option = Option_ {
         names: vec![],
@@ -81,8 +72,8 @@ fn routine() {
     let mut pos = 1;
     let mut current_command: &Command = &root_command;
     let mut current_option = &empty_option;
-    while pos != args.len() {
-        let token = &args[pos];
+    while pos != arguments.len() {
+        let token = &arguments[pos];
 
         if token.len() == 0 {
             pos += 1;
@@ -108,7 +99,7 @@ fn routine() {
                     // n_args > 0
                     let n_args = usize::try_from(option.arguments).unwrap();
                     // If the expected arguments are on the CLI, skip them
-                    if pos + n_args < args.len() - 1 {
+                    if pos + n_args < arguments.len() - 1 {
                         pos += n_args;
                         continue;
                     } else {
@@ -144,12 +135,22 @@ fn routine() {
     }
 
     for completion in candidates.iter() {
-        if completion.starts_with(args.last().unwrap()) {
+        if completion.starts_with(arguments.last().unwrap()) {
             println!("{}", completion);
         }
     }
 }
 
 fn main() {
-    routine()
+    let args: Vec<String>;
+
+    match std::env::var(&ENV_LINE_VAR) {
+        Ok(string) => args = string.split(" ").map(|s| s.to_string()).collect(),
+        Err(_) => {
+            println!("{}", COMMAND);
+            exit(0);
+        }
+    }
+
+    routine(&args)
 }

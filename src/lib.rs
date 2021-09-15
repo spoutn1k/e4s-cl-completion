@@ -92,6 +92,14 @@ pub mod structures {
     }
 }
 
+pub mod init_complete {
+    pub static COMMAND: &str = r#"complete -C ./target/debug/__e4s_cl_comp \
+    -o bashdefault \
+    -o default \
+    -o filenames \
+    e4s-cl"#;
+}
+
 pub mod ex {
     pub static SAMPLE_JSON: &str = r#"
 {
