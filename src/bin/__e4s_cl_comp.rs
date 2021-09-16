@@ -15,13 +15,7 @@ static ENV_LINE_VAR: &str = "COMP_LINE";
 static DATABASE: &'static str = ".local/e4s_cl/user.json";
 
 fn get_subcommand<'a>(desc: &'a Command, name: &str) -> Option<&'a Command> {
-    for command in desc.subcommands.iter() {
-        if command.name.as_str() == name {
-            return Some(command);
-        }
-    }
-
-    None
+    desc.subcommands.iter().find(|c| c.name.as_str() == name)
 }
 
 fn get_option<'a>(desc: &'a Command, name: &str) -> Option<&'a Option_> {
@@ -56,9 +50,9 @@ fn load_example() -> Result<Command, Box<dyn Error>> {
 }
 
 fn routine(arguments: &Vec<String>) {
-    let root_command = load_example().unwrap();
+    let root_command: Command = load_example().unwrap();
 
-    let mut candidates: Vec<&str>;
+    let candidates: Vec<&str>;
 
     let db_file = home_dir().unwrap().join(DATABASE);
     let profiles: Vec<Profile> = read_profiles(db_file).unwrap_or(vec![]);
@@ -72,7 +66,7 @@ fn routine(arguments: &Vec<String>) {
     let mut pos = 1;
     let mut current_command: &Command = &root_command;
     let mut current_option = &empty_option;
-    while pos != arguments.len() {
+    while pos < arguments.len() {
         let token = &arguments[pos];
 
         if token.len() == 0 {
@@ -95,7 +89,7 @@ fn routine(arguments: &Vec<String>) {
         match get_option(&current_command, &token) {
             // Get the option if it exists
             Some(option) => {
-                if option.arguments != UNSPECIFIED {
+                if option.arguments != UNSPECIFIED && option.arguments != 0 {
                     // n_args > 0
                     let n_args = usize::try_from(option.arguments).unwrap();
                     // If the expected arguments are on the CLI, skip them
@@ -115,21 +109,6 @@ fn routine(arguments: &Vec<String>) {
 
     if current_option.names.is_empty() {
         candidates = current_command.candidates(&profiles);
-        candidates.extend(
-            current_command
-                .subcommands
-                .iter()
-                .map(|x| x.name.as_str())
-                .collect::<Vec<&str>>(),
-        );
-        candidates.extend(
-            current_command
-                .options
-                .iter()
-                .map(|x| x.names.iter().map(|y| y.as_str()).collect::<Vec<&str>>())
-                .flatten()
-                .collect::<Vec<&str>>(),
-        );
     } else {
         candidates = current_option.candidates(&profiles);
     }
