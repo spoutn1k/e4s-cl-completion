@@ -13,22 +13,6 @@ pub mod structures {
 
         #[serde(default)]
         libraries: Vec<String>,
-        /*
-        #[serde(default)]
-        image: Option<String>,
-
-        #[serde(default)]
-        backend: Option<String>,
-
-        #[serde(default)]
-        source: Option<String>,
-
-        #[serde(default)]
-        wi4mpi: Option<String>,
-
-        #[serde(default)]
-         wi4mpi_options: Option<String>,
-         */
     }
 
     pub trait Completable {
@@ -123,45 +107,6 @@ pub mod init_complete {
 
 pub mod ex {
     pub static SAMPLE_JSON: &str = r#"
-{
-    "name": "root",
-    "options": [{
-        "names": ["-v", "--version"],
-        "arguments": 0
-    }, {
-        "names": ["-d", "--debug"],
-        "arguments": 0
-    }],
-    "subcommands": [{
-        "name": "launch",
-        "options": [{
-            "names": ["--image"],
-            "values": ["__e4s_cl_path"],
-            "arguments": 1
-        }, {
-            "names": ["--profile"],
-            "values": ["__e4s_cl_profile"],
-            "arguments": 1
-        }, {
-            "names": ["--backend"],
-            "values": ["singularity"],
-            "arguments": 1
-        }]
-    }, {
-        "name": "profile",
-        "subcommands": [{
-            "name": "list",
-            "values": ["__e4s_cl_profile"],
-            "arguments": 1,
-            "options": [{
-                "names": ["-s", "--short"]
-            }]
-        }, {
-            "name": "show",
-            "values": ["__e4s_cl_profile"],
-            "arguments": 1
-        }]
-    }]
-}
+{"name":"root","subcommands":[{"name":"__analyze","options":[{"names":["-h","--help"]},{"names":["--libraries"],"arguments":1}]},{"name":"__execute","options":[{"names":["-h","--help"]},{"names":["--backend"],"arguments":1},{"names":["--image"],"arguments":1},{"names":["--files"],"arguments":1},{"names":["--libraries"],"arguments":1},{"names":["--source"],"arguments":1}]},{"name":"help","options":[{"names":["-h","--help"]}]},{"name":"init","options":[{"names":["-h","--help"]},{"names":["--launcher"],"arguments":1},{"names":["--mpi"],"arguments":1},{"names":["--source"],"arguments":1},{"names":["--image"],"arguments":1},{"names":["--backend"],"arguments":1},{"names":["--profile"],"arguments":1,"values":["__e4s_cl_profile"]},{"names":["--wi4mpi"],"arguments":1},{"names":["--wi4mpi_options"],"arguments":1}]},{"name":"launch","options":[{"names":["-h","--help"]},{"names":["--profile"],"arguments":1,"values":["__e4s_cl_profile"]},{"names":["--image"],"arguments":1},{"names":["--source"],"arguments":1},{"names":["--files"],"arguments":1},{"names":["--libraries"],"arguments":1},{"names":["--backend"],"arguments":1}]},{"name":"profile","subcommands":[{"name":"copy","options":[{"names":["-h","--help"]},{"names":["-@"],"arguments":1,"values":["user","system"]}],"arguments":1,"values":["__e4s_cl_profile"]},{"name":"create","options":[{"names":["-h","--help"]},{"names":["--libraries"],"arguments":1},{"names":["--files"],"arguments":1},{"names":["--backend"],"arguments":1},{"names":["--image"],"arguments":1},{"names":["--source"],"arguments":1},{"names":["--wi4mpi"],"arguments":1},{"names":["--wi4mpi_options"],"arguments":1}]},{"name":"delete","options":[{"names":["-h","--help"]},{"names":["-@"],"arguments":1,"values":["user","system"]}]},{"name":"detect","options":[{"names":["-h","--help"]},{"names":["-p","--profile"],"arguments":1}]},{"name":"diff","options":[{"names":["-h","--help"]}],"arguments":1,"values":["__e4s_cl_profile"]},{"name":"dump","options":[{"names":["-h","--help"]},{"names":["-@"],"arguments":1,"values":["user","system"]}]},{"name":"edit","options":[{"names":["-h","--help"]},{"names":["--new_name"],"arguments":1},{"names":["--backend"],"arguments":1},{"names":["--image"],"arguments":1},{"names":["--source"],"arguments":1},{"names":["--add-files"],"arguments":1},{"names":["--remove-files"],"arguments":1},{"names":["--add-libraries"],"arguments":1},{"names":["--remove-libraries"],"arguments":1},{"names":["--wi4mpi"],"arguments":1},{"names":["--wi4mpi_options"],"arguments":1}],"arguments":1,"values":["__e4s_cl_profile"]},{"name":"list","options":[{"names":["-h","--help"]},{"names":["-s","--short"]},{"names":["-d","--dashboard"]},{"names":["-l","--long"]},{"names":["-@"],"arguments":1,"values":["user","system"]}]},{"name":"select","options":[{"names":["-h","--help"]}],"arguments":1,"values":["__e4s_cl_profile"]},{"name":"show","options":[{"names":["-h","--help"]},{"names":["--tree"]}],"arguments":1,"values":["__e4s_cl_profile"]},{"name":"unselect","options":[{"names":["-h","--help"]}],"arguments":1,"values":["__e4s_cl_profile"]}],"options":[{"names":["-h","--help"]}]}],"options":[{"names":["-h","--help"]},{"names":["-V","--version"]},{"names":["-v","--verbose"]},{"names":["-q","--quiet"]},{"names":["-d","--dry-run"]},{"names":["--slave"]}]}
 "#;
 }
