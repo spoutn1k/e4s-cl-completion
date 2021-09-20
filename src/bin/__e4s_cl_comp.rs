@@ -1,8 +1,8 @@
 use dirs::home_dir;
 use e4s_cl_completion::ex::SAMPLE_JSON;
-use e4s_cl_completion::init_complete::COMMAND;
 use e4s_cl_completion::structures::{Command, Completable, Option_, Profile};
 use std::convert::TryFrom;
+use std::env;
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
@@ -121,15 +121,16 @@ fn routine(arguments: &Vec<String>) {
 }
 
 fn main() {
-    let args: Vec<String>;
+    let mut args = env::args();
+    let command_line: Vec<String>;
 
     match std::env::var(&ENV_LINE_VAR) {
-        Ok(string) => args = string.split(" ").map(|s| s.to_string()).collect(),
+        Ok(string) => command_line = string.split(" ").map(|s| s.to_string()).collect(),
         Err(_) => {
-            println!("{}", COMMAND);
+            println!(include_str!("complete.fmt"), args.next().unwrap());
             exit(0);
         }
     }
 
-    routine(&args)
+    routine(&command_line)
 }
