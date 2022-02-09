@@ -1,6 +1,6 @@
 use dirs::home_dir;
 use e4s_cl_completion::ex::SAMPLE_JSON;
-use e4s_cl_completion::structures::{Command, Completable, Option_, Profile};
+use e4s_cl_completion::structures::{ArgumentCount, Command, Completable, Option_, Profile};
 use std::convert::TryFrom;
 use std::env;
 use std::error::Error;
@@ -9,7 +9,6 @@ use std::io::BufReader;
 use std::path::Path;
 use std::process::exit;
 
-static UNSPECIFIED: i32 = -1;
 static ENV_LINE_VAR: &str = "COMP_LINE";
 
 static DATABASE: &'static str = ".local/e4s_cl/user.json";
@@ -50,7 +49,15 @@ fn load_example() -> Result<Command, Box<dyn Error>> {
 }
 
 fn routine(arguments: &Vec<String>) {
-    let root_command: Command = load_example().unwrap();
+    let root_command: Command;
+
+    match load_example() {
+        Ok(object) => root_command = object,
+        Err(error) => {
+            eprintln!("Error loading JSON: {}", error);
+            return;
+        }
+    }
 
     let candidates: Vec<&str>;
 
@@ -60,7 +67,8 @@ fn routine(arguments: &Vec<String>) {
     let empty_option = Option_ {
         names: vec![],
         values: vec![],
-        arguments: 0,
+        arguments: ArgumentCount::Fixed(0),
+        expected_type: String::from(""),
     };
 
     let mut pos = 1;
@@ -89,9 +97,9 @@ fn routine(arguments: &Vec<String>) {
         match get_option(&current_command, &token) {
             // Get the option if it exists
             Some(option) => {
-                if option.arguments != UNSPECIFIED && option.arguments != 0 {
+                if let ArgumentCount::Fixed(count) = option.arguments {
                     // n_args > 0
-                    let n_args = usize::try_from(option.arguments).unwrap();
+                    let n_args = usize::try_from(count).unwrap();
                     // If the expected arguments are on the CLI, skip them
                     if pos + n_args < arguments.len() - 1 {
                         pos += n_args;
