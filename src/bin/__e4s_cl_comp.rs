@@ -1,9 +1,15 @@
+#[macro_use]
+extern crate log;
+
 use dirs::home_dir;
 use e4s_cl_completion::ex::SAMPLE_JSON;
 use e4s_cl_completion::structures::{ArgumentCount, Command, Completable, Option_, Profile};
+use shlex::split;
+use simplelog::{Config, LevelFilter, WriteLogger};
 use std::convert::TryFrom;
 use std::env;
 use std::error::Error;
+use std::fmt;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
@@ -12,6 +18,17 @@ use std::process::exit;
 static ENV_LINE_VAR: &str = "COMP_LINE";
 
 static DATABASE: &'static str = ".local/e4s_cl/user.json";
+
+#[derive(Debug)]
+struct DeserializationError(String);
+
+impl fmt::Display for DeserializationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Error for DeserializationError {}
 
 fn get_subcommand<'a>(desc: &'a Command, name: &str) -> Option<&'a Command> {
     desc.subcommands.iter().find(|c| c.name.as_str() == name)
@@ -27,7 +44,7 @@ fn get_option<'a>(desc: &'a Command, name: &str) -> Option<&'a Option_> {
     None
 }
 
-fn read_profiles<P: AsRef<Path>>(path: P) -> Result<Vec<Profile>, Box<dyn Error>> {
+fn load_profiles<P: AsRef<Path>>(path: P) -> Result<Vec<Profile>, Box<dyn Error>> {
     // Open the file in read-only mode with buffer.
     let file = File::open(path)?;
     let reader = BufReader::new(file);
@@ -40,7 +57,9 @@ fn read_profiles<P: AsRef<Path>>(path: P) -> Result<Vec<Profile>, Box<dyn Error>
             .iter()
             .map(|(_i, data)| serde_json::from_value::<Profile>(data.to_owned()).unwrap())
             .collect()),
-        None => Ok(vec![]),
+        None => Err(Box::new(DeserializationError(
+            "Deserialization failed".to_string(),
+        ))),
     }
 }
 
@@ -54,15 +73,25 @@ fn routine(arguments: &Vec<String>) {
     match load_example() {
         Ok(object) => root_command = object,
         Err(error) => {
-            eprintln!("Error loading JSON: {}", error);
+            error!("Error loading JSON: {}", error);
             return;
         }
     }
 
-    let candidates: Vec<&str>;
-
     let db_file = home_dir().unwrap().join(DATABASE);
-    let profiles: Vec<Profile> = read_profiles(db_file).unwrap_or(vec![]);
+
+    let candidates: Vec<&str>;
+    let profiles: Vec<Profile>;
+
+    match load_profiles(db_file) {
+        Ok(data) => profiles = data,
+        Err(error) => {
+            error!("Loading profiles failed: {:?}", error);
+            profiles = vec![];
+        }
+    }
+
+    info!("Loaded profiles: {:?}", profiles);
 
     let empty_option = Option_ {
         names: vec![],
@@ -132,13 +161,42 @@ fn main() {
     let mut args = env::args();
     let command_line: Vec<String>;
 
-    match std::env::var(&ENV_LINE_VAR) {
-        Ok(string) => command_line = string.split(" ").map(|s| s.to_string()).collect(),
-        Err(_) => {
-            println!(include_str!("complete.fmt"), args.next().unwrap());
+    if cfg!(debug_assertions) {
+        WriteLogger::init(
+            LevelFilter::Debug,
+            Config::default(),
+            File::create("/tmp/e4s-cl-completion").unwrap(),
+        )
+        .unwrap();
+    }
+
+    info!("Initialized logging");
+
+    // Get the completion line from the environment
+    let raw_cli = std::env::var(&ENV_LINE_VAR);
+    if raw_cli.is_err() {
+        println!(include_str!("complete.fmt"), args.next().unwrap());
+        exit(0);
+    }
+
+    let string = raw_cli.unwrap();
+
+    // Chop it into parts, to understand what has already been written
+    match split(&string) {
+        Some(mut data) => {
+            // Add a final element if finished by a space
+            if string.chars().last().unwrap() == ' ' {
+                data.insert(data.len(), "".to_string())
+            }
+
+            command_line = data;
+        }
+        None => {
+            error!("Command line split failed !");
             exit(0);
         }
     }
 
+    info!("Command line: {:?}", &command_line);
     routine(&command_line)
 }
