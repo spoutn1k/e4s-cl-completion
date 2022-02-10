@@ -2,11 +2,9 @@
 extern crate log;
 
 use dirs::home_dir;
-use e4s_cl_completion::ex::SAMPLE_JSON;
-use e4s_cl_completion::structures::{ArgumentCount, Command, Completable, Option_, Profile};
+use e4s_cl_completion::structures::{ArgumentCount, Command, Completable, Profile};
 use shlex::split;
 use simplelog::{Config, LevelFilter, WriteLogger};
-use std::convert::TryFrom;
 use std::env;
 use std::error::Error;
 use std::fmt;
@@ -16,7 +14,6 @@ use std::path::Path;
 use std::process::exit;
 
 static ENV_LINE_VAR: &str = "COMP_LINE";
-
 static DATABASE: &'static str = ".local/e4s_cl/user.json";
 
 #[derive(Debug)]
@@ -29,20 +26,6 @@ impl fmt::Display for DeserializationError {
 }
 
 impl Error for DeserializationError {}
-
-fn get_subcommand<'a>(desc: &'a Command, name: &str) -> Option<&'a Command> {
-    desc.subcommands.iter().find(|c| c.name.as_str() == name)
-}
-
-fn get_option<'a>(desc: &'a Command, name: &str) -> Option<&'a Option_> {
-    for option in desc.options.iter() {
-        if option.names.iter().find(|x| x.as_str() == name).is_some() {
-            return Some(option);
-        }
-    }
-
-    None
-}
 
 fn load_profiles<P: AsRef<Path>>(path: P) -> Result<Vec<Profile>, Box<dyn Error>> {
     // Open the file in read-only mode with buffer.
@@ -63,14 +46,87 @@ fn load_profiles<P: AsRef<Path>>(path: P) -> Result<Vec<Profile>, Box<dyn Error>
     }
 }
 
-fn load_example() -> Result<Command, Box<dyn Error>> {
-    Ok(serde_json::from_str(SAMPLE_JSON)?)
+fn load_commands() -> Result<Command, Box<dyn Error>> {
+    Ok(serde_json::from_str(include_str!("completion.json"))?)
+}
+
+fn context_end(command: &Command, arguments: &[String]) -> usize {
+    let mut iter = arguments.iter().peekable();
+
+    while let Some(value) = iter.next() {
+        if let Some(option) = command.is_option(value) {
+            match option.arguments {
+                ArgumentCount::Fixed(size) => {
+                    for _ in 0..size {
+                        iter.next();
+                    }
+                }
+
+                ArgumentCount::AtMostOne() => {
+                    if let Some(&value) = iter.peek() {
+                        if command.is_option(value).is_some() {
+                            iter.next();
+                        }
+                    }
+                }
+
+                _ => {
+                    let mut ended: bool = false;
+                    while !ended {
+                        if let Some(&value) = iter.peek() {
+                            if command.is_option(value).is_some() {
+                                ended = true;
+                            } else {
+                                iter.next();
+                            }
+                        } else {
+                            ended = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(_) = command.is_subcommand(value) {
+            debug!("{} is a subcommand of {} !", value, command.name);
+            break;
+        }
+    }
+
+    let mut remaining: usize = 0;
+    while let Some(_) = iter.next() {
+        remaining += 1;
+    }
+
+    if remaining > 0 {
+        let context_end = arguments.len() - remaining - 1;
+
+        debug!(
+            "{} context is {:?}, switches for {:?}",
+            command.name,
+            &arguments[..context_end],
+            &arguments[context_end..],
+        );
+
+        context_end
+    } else {
+        debug!(
+            "All the arguments in {:?} belong to the {} context",
+            arguments, command.name
+        );
+        0
+    }
 }
 
 fn routine(arguments: &Vec<String>) {
     let root_command: Command;
 
-    match load_example() {
+    let db_file = home_dir().unwrap().join(DATABASE);
+
+    let candidates: Vec<&str>;
+    let profiles: Vec<Profile>;
+
+    match load_commands() {
         Ok(object) => root_command = object,
         Err(error) => {
             error!("Error loading JSON: {}", error);
@@ -78,10 +134,7 @@ fn routine(arguments: &Vec<String>) {
         }
     }
 
-    let db_file = home_dir().unwrap().join(DATABASE);
-
-    let candidates: Vec<&str>;
-    let profiles: Vec<Profile>;
+    debug!("Loaded commands");
 
     match load_profiles(db_file) {
         Ok(data) => profiles = data,
@@ -91,64 +144,47 @@ fn routine(arguments: &Vec<String>) {
         }
     }
 
-    info!("Loaded profiles: {:?}", profiles);
-
-    let empty_option = Option_ {
-        names: vec![],
-        values: vec![],
-        arguments: ArgumentCount::Fixed(0),
-        expected_type: String::from(""),
-    };
+    debug!("Loaded profiles: {:?}", profiles);
 
     let mut pos = 1;
-    let mut current_command: &Command = &root_command;
-    let mut current_option = &empty_option;
+    let mut context_path: Vec<&Command> = vec![&root_command];
+
     while pos < arguments.len() {
         let token = &arguments[pos];
+        let context = context_path.last().unwrap();
 
         if token.len() == 0 {
             pos += 1;
             continue;
         }
 
-        // Check if the token introduces a new subcommand
-        match get_subcommand(&current_command, &token) {
-            Some(command) => {
-                // Switch context over to the new command, and start again
-                current_command = command;
-                current_option = &empty_option;
-                pos += 1;
-                continue;
-            }
-            None => (),
-        }
+        let skip = context_end(context, &arguments[pos..]);
 
-        match get_option(&current_command, &token) {
-            // Get the option if it exists
-            Some(option) => {
-                if let ArgumentCount::Fixed(count) = option.arguments {
-                    // n_args > 0
-                    let n_args = usize::try_from(count).unwrap();
-                    // If the expected arguments are on the CLI, skip them
-                    if pos + n_args < arguments.len() - 1 {
-                        pos += n_args;
-                        continue;
-                    } else {
-                        current_option = option;
-                    }
-                }
-            }
-            None => (),
-        }
+        if skip > 0 {
+            pos += skip;
 
-        pos += 1;
+            if let Some(command) = context.is_subcommand(&arguments[pos]) {
+                context_path.insert(context_path.len(), command);
+            } else {
+                // Raise an error here, misunderstood command line
+            }
+
+            debug!(
+                "New context is {}: {:?}",
+                arguments[pos],
+                context_path
+                    .iter()
+                    .map(|c| c.name.to_owned())
+                    .collect::<Vec<String>>()
+            );
+        } else {
+            pos = arguments.len()
+        }
     }
 
-    if current_option.names.is_empty() {
-        candidates = current_command.candidates(&profiles);
-    } else {
-        candidates = current_option.candidates(&profiles);
-    }
+    candidates = context_path.last().unwrap().candidates(&profiles);
+
+    debug!("Candidates: {:?}", candidates);
 
     for completion in candidates.iter() {
         if completion.starts_with(arguments.last().unwrap()) {
@@ -168,9 +204,8 @@ fn main() {
             File::create("/tmp/e4s-cl-completion").unwrap(),
         )
         .unwrap();
+        debug!("Initialized logging");
     }
-
-    info!("Initialized logging");
 
     // Get the completion line from the environment
     let raw_cli = std::env::var(&ENV_LINE_VAR);
@@ -189,6 +224,7 @@ fn main() {
                 data.insert(data.len(), "".to_string())
             }
 
+            debug!("Command line: {:?}", data);
             command_line = data;
         }
         None => {
@@ -197,6 +233,5 @@ fn main() {
         }
     }
 
-    info!("Command line: {:?}", &command_line);
     routine(&command_line)
 }

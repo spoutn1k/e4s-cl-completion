@@ -1,0 +1,303 @@
+{
+    "name": "root",
+    "subcommands": [{
+        "name": "__analyze",
+        "options": [{
+            "names": ["-h", "--help"]
+        }, {
+            "names": ["--libraries"],
+            "arguments": "ARGS_SOME"
+        }]
+    }, {
+        "name": "__execute",
+        "options": [{
+            "names": ["-h", "--help"]
+        }, {
+            "names": ["--backend"],
+            "arguments": 1,
+            "expected_type": "str"
+        }, {
+            "names": ["--image"],
+            "arguments": 1,
+            "expected_type": "str"
+        }, {
+            "names": ["--files"],
+            "arguments": 1,
+            "expected_type": "existing_posix_path_list"
+        }, {
+            "names": ["--libraries"],
+            "arguments": 1,
+            "expected_type": "existing_posix_path_list"
+        }, {
+            "names": ["--source"],
+            "arguments": 1,
+            "expected_type": "existing_posix_path"
+        }]
+    }, {
+        "name": "help",
+        "options": [{
+            "names": ["-h", "--help"]
+        }]
+    }, {
+        "name": "init",
+        "options": [{
+            "names": ["-h", "--help"]
+        }, {
+            "names": ["--system"],
+            "arguments": 1,
+            "values": ["__test_system"]
+        }, {
+            "names": ["--launcher"],
+            "arguments": 1,
+            "expected_type": "launcher_argument"
+        }, {
+            "names": ["--launcher_args"],
+            "arguments": 1
+        }, {
+            "names": ["--mpi"],
+            "arguments": 1,
+            "expected_type": "posix_path"
+        }, {
+            "names": ["--source"],
+            "arguments": 1
+        }, {
+            "names": ["--image"],
+            "arguments": 1
+        }, {
+            "names": ["--backend"],
+            "arguments": 1
+        }, {
+            "names": ["--profile"],
+            "arguments": 1
+        }, {
+            "names": ["--wi4mpi"],
+            "arguments": 1
+        }, {
+            "names": ["--wi4mpi_options"],
+            "arguments": 1
+        }]
+    }, {
+        "name": "launch",
+        "options": [{
+            "names": ["-h", "--help"]
+        }, {
+            "names": ["--profile"],
+            "arguments": 1,
+            "expected_type": "defined_profile"
+        }, {
+            "names": ["--image"],
+            "arguments": 1,
+            "expected_type": "str"
+        }, {
+            "names": ["--source"],
+            "arguments": 1,
+            "expected_type": "posix_path"
+        }, {
+            "names": ["--files"],
+            "arguments": 1,
+            "expected_type": "posix_path_list"
+        }, {
+            "names": ["--libraries"],
+            "arguments": 1,
+            "expected_type": "posix_path_list"
+        }, {
+            "names": ["--backend"],
+            "arguments": 1
+        }]
+    }, {
+        "name": "profile",
+        "subcommands": [{
+            "name": "copy",
+            "positionals": [{
+                "arguments": "ARGS_ATMOSTONE",
+                "expected_type": "defined_profile"
+            }],
+            "options": [{
+                "names": ["-h", "--help"]
+            }, {
+                "names": ["-@"],
+                "arguments": 1,
+                "values": ["user", "system"]
+            }]
+        }, {
+            "name": "create",
+            "positionals": [{
+                "arguments": 1,
+                "expected_type": "str"
+            }],
+            "options": [{
+                "names": ["-h", "--help"]
+            }, {
+                "names": ["--libraries"],
+                "arguments": 1,
+                "expected_type": "posix_path_list"
+            }, {
+                "names": ["--files"],
+                "arguments": 1,
+                "expected_type": "posix_path_list"
+            }, {
+                "names": ["--backend"],
+                "arguments": 1
+            }, {
+                "names": ["--image"],
+                "arguments": 1,
+                "expected_type": "posix_path"
+            }, {
+                "names": ["--source"],
+                "arguments": 1,
+                "expected_type": "posix_path"
+            }, {
+                "names": ["--wi4mpi"],
+                "arguments": 1,
+                "expected_type": "posix_path"
+            }, {
+                "names": ["--wi4mpi_options"],
+                "arguments": 1
+            }]
+        }, {
+            "name": "delete",
+            "positionals": [{
+                "arguments": "ARGS_ATLEASTONE",
+                "expected_type": "defined_profile"
+            }],
+            "options": [{
+                "names": ["-h", "--help"]
+            }, {
+                "names": ["-@"],
+                "arguments": 1,
+                "values": ["user", "system"]
+            }]
+        }, {
+            "name": "detect",
+            "options": [{
+                "names": ["-h", "--help"]
+            }, {
+                "names": ["-p", "--profile"],
+                "arguments": 1
+            }]
+        }, {
+            "name": "diff",
+            "positionals": [{
+                "arguments": "ARGS_ATMOSTONE",
+                "expected_type": "defined_profile"
+            }, {
+                "arguments": 1,
+                "expected_type": "defined_profile"
+            }],
+            "options": [{
+                "names": ["-h", "--help"]
+            }]
+        }, {
+            "name": "dump",
+            "options": [{
+                "names": ["-h", "--help"]
+            }, {
+                "names": ["-@"],
+                "arguments": "ARGS_ATLEASTONE",
+                "values": ["user", "system"]
+            }]
+        }, {
+            "name": "edit",
+            "positionals": [{
+                "arguments": "ARGS_ATMOSTONE",
+                "expected_type": "defined_profile"
+            }],
+            "options": [{
+                "names": ["-h", "--help"]
+            }, {
+                "names": ["--new_name"],
+                "arguments": 1
+            }, {
+                "names": ["--backend"],
+                "arguments": 1
+            }, {
+                "names": ["--image"],
+                "arguments": 1,
+                "expected_type": "str"
+            }, {
+                "names": ["--source"],
+                "arguments": 1,
+                "expected_type": "posix_path"
+            }, {
+                "names": ["--add-files"],
+                "arguments": "ARGS_ATLEASTONE",
+                "expected_type": "posix_path"
+            }, {
+                "names": ["--remove-files"],
+                "arguments": "ARGS_ATLEASTONE",
+                "expected_type": "posix_path"
+            }, {
+                "names": ["--add-libraries"],
+                "arguments": "ARGS_ATLEASTONE",
+                "expected_type": "posix_path"
+            }, {
+                "names": ["--remove-libraries"],
+                "arguments": "ARGS_ATLEASTONE",
+                "expected_type": "posix_path"
+            }, {
+                "names": ["--wi4mpi"],
+                "arguments": 1,
+                "expected_type": "posix_path"
+            }, {
+                "names": ["--wi4mpi_options"],
+                "arguments": 1
+            }]
+        }, {
+            "name": "list",
+            "options": [{
+                "names": ["-h", "--help"]
+            }, {
+                "names": ["-s", "--short"]
+            }, {
+                "names": ["-d", "--dashboard"]
+            }, {
+                "names": ["-l", "--long"]
+            }, {
+                "names": ["-@"],
+                "arguments": "ARGS_ATLEASTONE",
+                "values": ["user", "system"]
+            }]
+        }, {
+            "name": "select",
+            "positionals": [{
+                "arguments": "ARGS_ATMOSTONE",
+                "expected_type": "defined_profile"
+            }],
+            "options": [{
+                "names": ["-h", "--help"]
+            }]
+        }, {
+            "name": "show",
+            "positionals": [{
+                "arguments": "ARGS_ATMOSTONE",
+                "expected_type": "defined_profile"
+            }],
+            "options": [{
+                "names": ["-h", "--help"]
+            }]
+        }, {
+            "name": "unselect",
+            "positionals": [{
+                "arguments": "ARGS_ATMOSTONE",
+                "expected_type": "defined_profile"
+            }],
+            "options": [{
+                "names": ["-h", "--help"]
+            }]
+        }],
+        "options": [{
+            "names": ["-h", "--help"]
+        }]
+    }],
+    "options": [{
+        "names": ["-h", "--help"]
+    }, {
+        "names": ["-V", "--version"]
+    }, {
+        "names": ["-v", "--verbose"]
+    }, {
+        "names": ["-q", "--quiet"]
+    }, {
+        "names": ["-d", "--dry-run"]
+    }]
+}
