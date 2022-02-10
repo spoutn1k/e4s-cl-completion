@@ -33,7 +33,7 @@ pub mod structures {
         Any(),
     }
 
-    fn int_or_special<'de, D>(deserializer: D) -> Result<ArgumentCount, D::Error>
+    fn argument_count_de<'de, D>(deserializer: D) -> Result<ArgumentCount, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -79,12 +79,55 @@ pub mod structures {
     }
 
     #[derive(Deserialize, Debug)]
+    #[serde(untagged)]
+    pub enum ExpectedType {
+        Unknown(),
+        Profile(),
+        Path(),
+    }
+
+    fn expected_type_de<'de, D>(deserializer: D) -> Result<ExpectedType, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct TypeVisitor;
+
+        impl<'de> Visitor<'de> for TypeVisitor {
+            type Value = ExpectedType;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("enum ExpectedType")
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                match s {
+                    "defined_profile" => Ok(ExpectedType::Profile()),
+                    _ => Ok(ExpectedType::Unknown()),
+                }
+            }
+        }
+
+        deserializer.deserialize_string(TypeVisitor)
+    }
+
+    impl Default for ExpectedType {
+        fn default() -> ExpectedType {
+            return ExpectedType::Unknown();
+        }
+    }
+
+    #[derive(Deserialize, Debug)]
     pub struct Positional {
-        #[serde(deserialize_with = "int_or_special")]
+        #[serde(default)]
+        #[serde(deserialize_with = "argument_count_de")]
         pub arguments: ArgumentCount,
 
         #[serde(default)]
-        pub expected_type: String,
+        #[serde(deserialize_with = "expected_type_de")]
+        pub expected_type: ExpectedType,
     }
 
     #[derive(Deserialize, Debug)]
@@ -95,11 +138,12 @@ pub mod structures {
         pub values: Vec<String>,
 
         #[serde(default)]
-        #[serde(deserialize_with = "int_or_special")]
+        #[serde(deserialize_with = "argument_count_de")]
         pub arguments: ArgumentCount,
 
         #[serde(default)]
-        pub expected_type: String,
+        #[serde(deserialize_with = "expected_type_de")]
+        pub expected_type: ExpectedType,
     }
 
     impl Completable for Option_ {
