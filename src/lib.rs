@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate log;
+
 pub mod structures {
 
     use serde::de::Visitor;
@@ -17,11 +20,11 @@ pub mod structures {
     }
 
     pub trait Completable {
-        fn candidates<'a>(&'a self, profiles: &'a Vec<Profile>) -> Vec<&'a str>;
-    }
-
-    pub trait Consumer {
-        fn consumables(&self, available: &Vec<&str>, parent: &Command) -> usize;
+        fn candidates<'a>(
+            &'a self,
+            arguments: &[String],
+            profiles: &'a Vec<Profile>,
+        ) -> Vec<&'a str>;
     }
 
     #[derive(Deserialize, Debug)]
@@ -147,7 +150,11 @@ pub mod structures {
     }
 
     impl Completable for Option_ {
-        fn candidates<'a>(&'a self, _profiles: &'a Vec<Profile>) -> Vec<&'a str> {
+        fn candidates<'a>(
+            &'a self,
+            _arguments: &[String],
+            _profiles: &'a Vec<Profile>,
+        ) -> Vec<&'a str> {
             // Complete with possible values
             self.values.iter().map(|x| x.as_str()).collect()
         }
@@ -184,7 +191,13 @@ pub mod structures {
     }
 
     impl Completable for Command {
-        fn candidates<'a>(&'a self, _profiles: &'a Vec<Profile>) -> Vec<&'a str> {
+        fn candidates<'a>(
+            &'a self,
+            arguments: &[String],
+            _profiles: &'a Vec<Profile>,
+        ) -> Vec<&'a str> {
+            debug!("Completing {:?} with {} command", arguments, self.name);
+
             // Complete with possible values
             let mut strings: Vec<&str> = vec![];
 
