@@ -146,12 +146,22 @@ fn routine(arguments: &Vec<String>) {
 
     debug!("Loaded profiles: {:?}", profiles);
 
-    let mut pos = 1;
+    let mut pos = 0;
     let mut context_path: Vec<&Command> = vec![&root_command];
 
     while pos < arguments.len() {
         let token = &arguments[pos];
         let context = context_path.last().unwrap();
+
+        debug!(
+            "Context is command '{}' ({})",
+            context.name,
+            context_path
+                .iter()
+                .map(|c| c.name.to_owned())
+                .collect::<Vec<String>>()
+                .join(" => ")
+        );
 
         if token.len() == 0 {
             pos += 1;
@@ -168,21 +178,15 @@ fn routine(arguments: &Vec<String>) {
             } else {
                 // Raise an error here, misunderstood command line
             }
-
-            debug!(
-                "New context is {}: {:?}",
-                arguments[pos],
-                context_path
-                    .iter()
-                    .map(|c| c.name.to_owned())
-                    .collect::<Vec<String>>()
-            );
         } else {
-            pos = arguments.len()
+            pos = arguments.len();
         }
     }
 
-    candidates = context_path.last().unwrap().candidates(&profiles);
+    candidates = context_path
+        .last()
+        .unwrap()
+        .candidates(&arguments[pos..], &profiles);
 
     debug!("Candidates: {:?}", candidates);
 
