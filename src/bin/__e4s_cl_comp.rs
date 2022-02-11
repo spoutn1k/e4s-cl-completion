@@ -2,7 +2,7 @@
 extern crate log;
 
 use dirs::home_dir;
-use e4s_cl_completion::structures::{Command, Completable, Profile};
+use e4s_cl_completion::structures::{Command, Profile};
 use shlex::split;
 use simplelog::{Config, LevelFilter, WriteLogger};
 use std::env;

@@ -6,6 +6,7 @@ pub mod structures {
     use serde::de::Visitor;
     use serde::de::{Error, Unexpected};
     use serde::{Deserialize, Deserializer};
+    use std::collections::HashSet;
 
     #[derive(Deserialize, Debug)]
     pub struct Profile {
@@ -17,14 +18,6 @@ pub mod structures {
         #[serde(default)]
         libraries: Vec<String>,
         */
-    }
-
-    pub trait Completable {
-        fn candidates<'a>(
-            &'a self,
-            arguments: &[String],
-            profiles: &'a Vec<Profile>,
-        ) -> Vec<&'a str>;
     }
 
     #[derive(Deserialize, Debug)]
@@ -122,6 +115,10 @@ pub mod structures {
         }
     }
 
+    pub trait Completable {
+        fn available<'a>(&'a self, profiles: &'a Vec<Profile>) -> Vec<&'a str>;
+    }
+
     #[derive(Deserialize, Debug)]
     pub struct Positional {
         #[serde(default)]
@@ -131,6 +128,19 @@ pub mod structures {
         #[serde(default)]
         #[serde(deserialize_with = "expected_type_de")]
         pub expected_type: ExpectedType,
+    }
+
+    impl Completable for Positional {
+        fn available<'a>(&'a self, profiles: &'a Vec<Profile>) -> Vec<&'a str> {
+            debug!("Getting available completion for positional");
+            match self.expected_type {
+                ExpectedType::Profile() => profiles
+                    .iter()
+                    .map(|x| x.name.as_str())
+                    .collect::<Vec<&str>>(),
+                _ => vec![],
+            }
+        }
     }
 
     #[derive(Deserialize, Debug)]
@@ -150,28 +160,17 @@ pub mod structures {
     }
 
     impl Completable for Option_ {
-        fn candidates<'a>(
-            &'a self,
-            _arguments: &[String],
-            _profiles: &'a Vec<Profile>,
-        ) -> Vec<&'a str> {
-            // Complete with possible values
-            self.values.iter().map(|x| x.as_str()).collect()
+        fn available<'a>(&'a self, profiles: &'a Vec<Profile>) -> Vec<&'a str> {
+            debug!("Getting available completion for option {:?}", self.names);
+
+            match self.expected_type {
+                ExpectedType::Profile() => profiles
+                    .iter()
+                    .map(|x| x.name.as_str())
+                    .collect::<Vec<&str>>(),
+                _ => vec![],
+            }
         }
-    }
-
-    #[derive(Deserialize, Debug)]
-    pub struct Command {
-        pub name: String,
-
-        #[serde(default)]
-        pub subcommands: Vec<Command>,
-
-        #[serde(default)]
-        pub positionals: Vec<Positional>,
-
-        #[serde(default)]
-        pub options: Vec<Option_>,
     }
 
     impl Option_ {
@@ -214,6 +213,54 @@ pub mod structures {
         }
     }
 
+    #[derive(Deserialize, Debug)]
+    pub struct Command {
+        pub name: String,
+
+        #[serde(default)]
+        pub subcommands: Vec<Command>,
+
+        #[serde(default)]
+        pub positionals: Vec<Positional>,
+
+        #[serde(default)]
+        pub options: Vec<Option_>,
+    }
+
+    impl Completable for Command {
+        fn available<'a>(&'a self, profiles: &'a Vec<Profile>) -> Vec<&'a str> {
+            let mut available: Vec<&str>;
+            debug!("Getting available completion for command {:?}", self.name);
+
+            available = self
+                .options
+                .iter()
+                .map(|x| x.names.iter().map(|y| y.as_str()).collect::<Vec<&str>>())
+                .flatten()
+                .collect::<Vec<_>>();
+
+            available.extend(
+                self.subcommands
+                    .iter()
+                    .map(|x| x.name.as_str())
+                    .collect::<Vec<&str>>(),
+            );
+
+            available.extend(
+                self.positionals
+                    .iter()
+                    .map(|x| x.available(profiles))
+                    .flatten()
+                    .collect::<HashSet<_>>()
+                    .into_iter()
+                    .collect::<Vec<&str>>(),
+            );
+
+            debug!("Available: {:?}", available);
+            available
+        }
+    }
+
     impl Command {
         pub fn is_option(&self, token: &str) -> Option<&Option_> {
             for option in self.options.iter() {
@@ -228,37 +275,88 @@ pub mod structures {
         pub fn is_subcommand(&self, token: &str) -> Option<&Command> {
             self.subcommands.iter().find(|c| c.name.as_str() == token)
         }
-    }
 
-    impl Completable for Command {
-        fn candidates<'a>(
+        pub fn candidates<'a>(
             &'a self,
             arguments: &[String],
-            _profiles: &'a Vec<Profile>,
+            profiles: &'a Vec<Profile>,
         ) -> Vec<&'a str> {
             debug!("Completing {:?} with {} command", arguments, self.name);
 
-            // Complete with possible values
-            let mut strings: Vec<&str> = vec![];
+            let mut iter = arguments.iter().peekable();
 
-            // Also subcommands
-            strings.extend(
-                self.subcommands
-                    .iter()
-                    .map(|x| x.name.as_str())
-                    .collect::<Vec<&str>>(),
-            );
+            let mut final_object: Option<&Option_> = None;
+            let mut positionals_used = 0;
+            let mut options_used: Vec<&str> = vec![];
 
-            // Also options
-            strings.extend(
-                self.options
+            iter.next();
+
+            while let Some(token) = iter.next() {
+                if let Some(option) = self.is_option(token) {
+                    final_object = Some(option);
+                    /*let index = self
+                        .options
+                        .iter()
+                        .position(|x| x.names == option.names)
+                        .unwrap();
+                    self.options.remove(index);*/
+                    option.consume_args(self, &mut iter);
+
+                    if iter.peek().is_some() {
+                        final_object = None;
+
+                        options_used.extend(
+                            option
+                                .names
+                                .iter()
+                                .map(|x| x.as_str())
+                                .collect::<Vec<&str>>(),
+                        );
+                    }
+                } else {
+                    // If we find a token that is not the end and also not
+                    // recognized as an option, it has to be a positional
+                    if iter.peek().is_some() {
+                        debug!("Token {} is not an option, must be a positional", token);
+                        positionals_used += 1;
+                    }
+                }
+            }
+
+            if let Some(option) = final_object {
+                option.available(profiles)
+            } else {
+                let mut available: Vec<&str>;
+                debug!("Getting available completion for command {:?}", self.name);
+                available = self
+                    .options
                     .iter()
                     .map(|x| x.names.iter().map(|y| y.as_str()).collect::<Vec<&str>>())
                     .flatten()
-                    .collect::<Vec<&str>>(),
-            );
+                    .collect::<Vec<_>>();
 
-            strings
+                available.extend(
+                    self.subcommands
+                        .iter()
+                        .map(|x| x.name.as_str())
+                        .collect::<Vec<&str>>(),
+                );
+
+                // Allow only po
+                if positionals_used < self.positionals.len() {
+                    available.extend(
+                        self.positionals[positionals_used..]
+                            .iter()
+                            .map(|x| x.available(profiles))
+                            .flatten()
+                            .collect::<HashSet<_>>()
+                            .into_iter()
+                            .collect::<Vec<&str>>(),
+                    );
+                }
+
+                available
+            }
         }
     }
 }
