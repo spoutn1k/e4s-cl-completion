@@ -2,7 +2,7 @@
 extern crate log;
 
 use dirs::home_dir;
-use e4s_cl_completion::structures::{ArgumentCount, Command, Completable, Profile};
+use e4s_cl_completion::structures::{Command, Completable, Profile};
 use shlex::split;
 use simplelog::{Config, LevelFilter, WriteLogger};
 use std::env;
@@ -51,40 +51,11 @@ fn load_commands() -> Result<Command, Box<dyn Error>> {
 }
 
 fn context_end(command: &Command, arguments: &[String]) -> usize {
-    let mut iter = arguments.iter().peekable();
+    let mut iter = arguments.iter();
 
     while let Some(value) = iter.next() {
         if let Some(option) = command.is_option(value) {
-            match option.arguments {
-                ArgumentCount::Fixed(size) => {
-                    for _ in 0..size {
-                        iter.next();
-                    }
-                }
-
-                ArgumentCount::AtMostOne() => {
-                    if let Some(&value) = iter.peek() {
-                        if command.is_option(value).is_some() {
-                            iter.next();
-                        }
-                    }
-                }
-
-                _ => {
-                    let mut ended: bool = false;
-                    while !ended {
-                        if let Some(&value) = iter.peek() {
-                            if command.is_option(value).is_some() {
-                                ended = true;
-                            } else {
-                                iter.next();
-                            }
-                        } else {
-                            ended = true;
-                        }
-                    }
-                }
-            }
+            option.consume_args(command, &mut iter);
         }
 
         if let Some(_) = command.is_subcommand(value) {
@@ -179,7 +150,7 @@ fn routine(arguments: &Vec<String>) {
                 // Raise an error here, misunderstood command line
             }
         } else {
-            pos = arguments.len();
+            break;
         }
     }
 
@@ -208,7 +179,7 @@ fn main() {
             File::create("/tmp/e4s-cl-completion").unwrap(),
         )
         .unwrap();
-        debug!("Initialized logging");
+        debug!("Initialized logging #################################");
     }
 
     // Get the completion line from the environment

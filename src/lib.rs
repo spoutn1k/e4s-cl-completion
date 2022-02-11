@@ -174,6 +174,46 @@ pub mod structures {
         pub options: Vec<Option_>,
     }
 
+    impl Option_ {
+        pub fn consume_args<'a, T>(&self, parent: &Command, arguments: &mut T)
+        where
+            T: Iterator<Item = &'a String>,
+        {
+            let mut arguments = arguments.peekable();
+
+            match self.arguments {
+                ArgumentCount::Fixed(size) => {
+                    for _ in 0..size {
+                        arguments.next();
+                    }
+                }
+
+                ArgumentCount::AtMostOne() => {
+                    if let Some(value) = arguments.peek() {
+                        if parent.is_option(&value).is_some() {
+                            arguments.next();
+                        }
+                    }
+                }
+
+                _ => {
+                    let mut ended: bool = false;
+                    while !ended {
+                        if let Some(value) = arguments.peek() {
+                            if parent.is_option(&value).is_some() {
+                                ended = true;
+                            } else {
+                                arguments.next();
+                            }
+                        } else {
+                            ended = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     impl Command {
         pub fn is_option(&self, token: &str) -> Option<&Option_> {
             for option in self.options.iter() {
