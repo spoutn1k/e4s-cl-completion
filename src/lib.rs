@@ -287,24 +287,24 @@ pub mod structures {
 
             let mut final_object: Option<&Option_> = None;
             let mut positionals_used = 0;
-            let mut options_used: Vec<&str> = vec![];
+            let mut options_used = HashSet::<&str>::new();
 
             iter.next();
 
             while let Some(token) = iter.next() {
                 if let Some(option) = self.is_option(token) {
+                    // Record the last used option
                     final_object = Some(option);
-                    /*let index = self
-                        .options
-                        .iter()
-                        .position(|x| x.names == option.names)
-                        .unwrap();
-                    self.options.remove(index);*/
+                    // Consume the command line
                     option.consume_args(self, &mut iter);
 
+                    // If we have not reached the end of the command line, there are other
+                    // options/positionals
                     if iter.peek().is_some() {
+                        // Remove the above from the final_object pointer
                         final_object = None;
 
+                        // Record the names of the used option
                         options_used.extend(
                             option
                                 .names
@@ -318,6 +318,7 @@ pub mod structures {
                     // recognized as an option, it has to be a positional
                     if iter.peek().is_some() {
                         debug!("Token {} is not an option, must be a positional", token);
+                        // Keep track of how many positionals have been used
                         positionals_used += 1;
                     }
                 }
@@ -328,12 +329,14 @@ pub mod structures {
             } else {
                 let mut available: Vec<&str>;
                 debug!("Getting available completion for command {:?}", self.name);
+
                 available = self
                     .options
                     .iter()
+                    .filter(|x| x.names.iter().any(|y| !options_used.contains(&y as &str)))
                     .map(|x| x.names.iter().map(|y| y.as_str()).collect::<Vec<&str>>())
                     .flatten()
-                    .collect::<Vec<_>>();
+                    .collect();
 
                 available.extend(
                     self.subcommands
