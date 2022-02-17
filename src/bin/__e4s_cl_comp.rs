@@ -161,7 +161,7 @@ fn routine(arguments: &Vec<String>) {
 
     debug!("Candidates: {:?}", candidates);
 
-    for completion in candidates.iter() {
+    for completion in candidates.iter().filter(|c| !c.starts_with("__")) {
         if completion.starts_with(arguments.last().unwrap()) {
             println!("{}", completion);
         }
