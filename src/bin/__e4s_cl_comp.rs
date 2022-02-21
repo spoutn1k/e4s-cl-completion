@@ -185,7 +185,8 @@ fn main() {
     // Get the completion line from the environment
     let raw_cli = std::env::var(&ENV_LINE_VAR);
     if raw_cli.is_err() {
-        println!(include_str!("complete.fmt"), args.next().unwrap());
+        let script: String = args.next().unwrap();
+        print!(include_str!("complete.fmt"), script, script);
         exit(0);
     }
 
